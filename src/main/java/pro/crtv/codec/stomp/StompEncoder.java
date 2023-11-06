@@ -16,7 +16,7 @@ public class StompEncoder {
     private static final byte COLON = ':';
     private static final byte NULL = '\0';
 
-    private static final Map<String, byte[]> cachedHeaderKeys = new HashMap<>();
+    private static final Map<String, byte[]> cachedHeaderKeys = new HashMap<>(StompHeader.values().length);
 
     static {
         for (StompHeader header : StompHeader.values()) {
