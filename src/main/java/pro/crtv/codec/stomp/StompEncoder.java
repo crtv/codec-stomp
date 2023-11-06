@@ -11,8 +11,6 @@ import static pro.crtv.codec.stomp.StompHeader.CONTENT_LENGTH;
 public class StompEncoder {
 
     private static final byte LINE_FEED = '\n';
-    private static final byte CARRIAGE_RETURN = '\r';
-    private static final byte BACKSLASH = '\\';
     private static final byte COLON = ':';
     private static final byte NULL = '\0';
 
@@ -96,16 +94,16 @@ public class StompEncoder {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < data.length(); i++) {
             char currentChar = data.charAt(i);
-            if (currentChar == LINE_FEED) {
+            if (currentChar == '\n') {
                 stringBuilder.append("\\n");
 
-            } else if (currentChar == CARRIAGE_RETURN) {
+            } else if (currentChar == '\r') {
                 stringBuilder.append("\\r");
 
-            } else if (currentChar == COLON) {
+            } else if (currentChar == ':') {
                 stringBuilder.append("\\c");
 
-            } else if (currentChar == BACKSLASH) {
+            } else if (currentChar == '\\') {
                 stringBuilder.append("\\\\");
             } else {
                 stringBuilder.append(currentChar);
