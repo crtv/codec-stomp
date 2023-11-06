@@ -10,9 +10,11 @@ import static pro.crtv.codec.stomp.StompHeader.CONTENT_LENGTH;
 
 public class StompEncoder {
 
-    private static final byte LF = '\n';
+    private static final byte LINE_FEED = '\n';
+    private static final byte CARRIAGE_RETURN = '\r';
+    private static final byte BACKSLASH = '\\';
     private static final byte COLON = ':';
-    private static final byte NULL = '0';
+    private static final byte NULL = '\0';
 
     private static final Map<String, byte[]> cachedHeaderKeys = new HashMap<>();
 
@@ -33,15 +35,15 @@ public class StompEncoder {
     private byte[] doEncode(StompFrame stompFrame) throws IOException {
         ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
         arrayOutputStream.write(stompFrame.getCommand().name().getBytes(StandardCharsets.UTF_8));
+        arrayOutputStream.write(LINE_FEED);
 
         if (stompFrame.getHeaders() != null) {
             arrayOutputStream.write(encodeHeaders(stompFrame));
-            arrayOutputStream.write(LF);
+            arrayOutputStream.write(LINE_FEED);
         }
 
         if (stompFrame.getPayload() != null) {
             arrayOutputStream.write(stompFrame.getPayload());
-            arrayOutputStream.write(LF);
         }
 
         arrayOutputStream.write(NULL);
@@ -49,11 +51,7 @@ public class StompEncoder {
     }
 
     private byte[] encodeHeaders(StompFrame stompFrame) throws IOException {
-        Map<String, String> headers = stompFrame.getHeaders();
-        if (headers == null) {
-            headers = new HashMap<>();
-        }
-
+        Map<String, String> headers = new HashMap<>(stompFrame.getHeaders());
         if (stompFrame.getPayload() != null) {
             headers.put(CONTENT_LENGTH.getKeyName(), Integer.toString(stompFrame.getPayload().length));
         }
@@ -68,6 +66,7 @@ public class StompEncoder {
             arrayOutputStream.write(encodeHeaderKey(e.getKey(), shouldEscape));
             arrayOutputStream.write(COLON);
             arrayOutputStream.write(encodeHeaderValue(e.getValue(), shouldEscape));
+            arrayOutputStream.write(LINE_FEED);
         }
 
         return arrayOutputStream.toByteArray();
@@ -94,11 +93,25 @@ public class StompEncoder {
     }
 
     private static byte[] escape(String data) {
-        ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+        StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < data.length(); i++) {
-            // todo: https://stomp.github.io/stomp-specification-1.2.html#Value_Encoding
+            char currentChar = data.charAt(i);
+            if (currentChar == LINE_FEED) {
+                stringBuilder.append("\\n");
+
+            } else if (currentChar == CARRIAGE_RETURN) {
+                stringBuilder.append("\\r");
+
+            } else if (currentChar == COLON) {
+                stringBuilder.append("\\c");
+
+            } else if (currentChar == BACKSLASH) {
+                stringBuilder.append("\\\\");
+            } else {
+                stringBuilder.append(currentChar);
+            }
         }
 
-        return arrayOutputStream.toByteArray();
+        return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
     }
 }
