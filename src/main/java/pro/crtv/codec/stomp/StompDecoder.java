@@ -12,11 +12,11 @@ public class StompDecoder {
     public StompFrame decode(byte[] message) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(message);
 
-        return new StompFrame(
-                readCommand(byteBuffer),
-                readHeaders(byteBuffer),
-                readPayload(byteBuffer)
-        );
+        StompCommand command = readCommand(byteBuffer);
+        Map<String, String> headers = readHeaders(byteBuffer, command);
+        byte[] payload = readPayload(byteBuffer, headers);
+
+        return new StompFrame(command, headers, payload);
     }
 
     private StompCommand readCommand(ByteBuffer byteBuffer) {
@@ -32,7 +32,6 @@ public class StompDecoder {
                 } else if (!byteBuffer.hasRemaining() || byteBuffer.get() != '\n') {
                     throw new IllegalStateException("Optional \\r must be followed by required \\n");
                 }
-
                 break;
             } else {
                 arrayOutputStream.write(b);
@@ -42,7 +41,7 @@ public class StompDecoder {
         return StompCommand.valueOf(arrayOutputStream.toString(StandardCharsets.UTF_8));
     }
 
-    private Map<String, String> readHeaders(ByteBuffer byteBuffer) {
+    private Map<String, String> readHeaders(ByteBuffer byteBuffer, StompCommand command) {
         // A blank line (i.e. an extra EOL) indicates the end of
         // the headers and the beginning of the body.
         if (byteBuffer.get() == '\n') {
@@ -56,13 +55,17 @@ public class StompDecoder {
             byte b = byteBuffer.get();
             if (b == '\n') {
                 String header = headerLine.toString(StandardCharsets.UTF_8);
-                String[] parts = header.split(":");
+                int colIndex = header.indexOf(':');
 
-                if (parts.length != 2) {
+                if (colIndex <= 0) {
                     throw new IllegalStateException("Header entries must be in <key>:<value> format.");
                 }
 
-                headers.put(parts[0].strip(), parts[1]);
+                headers.put(
+                        unescape(header.substring(0, colIndex), command.shouldEscape()),
+                        unescape(header.substring(colIndex + 1), command.shouldEscape())
+                );
+
                 headerLine.reset();
 
                 // A blank line (i.e. an extra EOL) indicates the end of
@@ -80,9 +83,44 @@ public class StompDecoder {
         return headers;
     }
 
+    private String unescape(String value, boolean shouldUnescape) {
+        if (!shouldUnescape) {
+            return value;
+        }
 
-    private byte[] readPayload(ByteBuffer byteBuffer) {
-        // todo: ...
-        return new byte[0];
+        // todo: unescape command characters
+        return value;
+    }
+
+    private byte[] readPayload(ByteBuffer byteBuffer, Map<String, String> headers) {
+        int contentLength = -1;
+        if (headers.containsKey(StompHeader.CONTENT_LENGTH.getKeyName())) {
+            try {
+                contentLength = Integer.parseInt(headers.get(StompHeader.CONTENT_LENGTH.getKeyName()));
+            } catch (NumberFormatException ignored) {
+                // will try to read all bytes
+            }
+        }
+
+        if (contentLength >= 0) {
+            byte[] payload = new byte[contentLength];
+            byteBuffer.get(payload);
+            if (!byteBuffer.hasRemaining() || byteBuffer.get() != '\0') {
+                throw new IllegalStateException("The body must by followed by the NULL octet.");
+            }
+            return payload;
+        } else {
+            ByteArrayOutputStream payload = new ByteArrayOutputStream();
+            while (byteBuffer.hasRemaining()) {
+                byte b = byteBuffer.get();
+                if (b == '\0') {
+                    return payload.toByteArray();
+                } else {
+                    payload.write(b);
+                }
+            }
+        }
+
+        throw new IllegalStateException("The body must by followed by the NULL octet.");
     }
 }
