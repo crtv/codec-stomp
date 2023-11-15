@@ -88,8 +88,33 @@ public class StompDecoder {
             return value;
         }
 
-        // todo: unescape command characters
-        return value;
+        StringBuilder sb = new StringBuilder(value.length());
+        int currentIndex = 0;
+
+        while (true) {
+            int nextIndex = value.indexOf('\\', currentIndex);
+            if (nextIndex == -1) {
+                sb.append(value, currentIndex, value.length());
+                break;
+            }
+
+            sb.append(value, currentIndex, nextIndex);
+            if (value.charAt(nextIndex + 1) == 'n') {
+                sb.append('\n');
+            } else if (value.charAt(nextIndex + 1) == 'r') {
+                sb.append('\r');
+            } else if (value.charAt(nextIndex + 1) == '\\') {
+                sb.append('\\');
+            } else if (value.charAt(nextIndex + 1) == 'c') {
+                sb.append(':');
+            } else {
+                throw new IllegalStateException("Unexpected escaped character occurred: " + value.charAt(nextIndex + 1));
+            }
+
+            currentIndex = nextIndex + 2;
+        }
+
+        return sb.toString();
     }
 
     private byte[] readPayload(ByteBuffer byteBuffer, Map<String, String> headers) {

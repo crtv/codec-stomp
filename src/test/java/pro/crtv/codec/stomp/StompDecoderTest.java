@@ -19,4 +19,13 @@ class StompDecoderTest {
         Assertions.assertEquals("test3", stompFrame.getHeaders().get("header3"));
         Assertions.assertEquals("test_payload", new String(stompFrame.getPayload()));
     }
+
+    @Test
+    void testUnescape() {
+        String message = "SUBSCRIBE\n\r\n\\c\\nhe\\nader\\n1\\n\\r\\n:\\n\\nte\\ns\\ct1\\n\\n\n\n\0";
+        StompFrame stompFrame = stompDecoder.decode(message.getBytes());
+
+        Assertions.assertEquals(StompCommand.SUBSCRIBE, stompFrame.getCommand());
+        Assertions.assertEquals("\n\nte\ns:t1\n\n", stompFrame.getHeaders().get(":\nhe\nader\n1\n\r\n"));
+    }
 }
