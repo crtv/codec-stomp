@@ -110,7 +110,7 @@ public class StompDecoder {
             } else if (nextChar == 'c') {
                 sb.append(':');
             } else {
-                throw new IllegalStateException("Unexpected escaped character occurred: " + value.charAt(nextIndex + 1));
+                throw new IllegalStateException("Unexpected escaped character occurred: " + nextChar);
             }
 
             currentIndex = nextIndex + 2;
