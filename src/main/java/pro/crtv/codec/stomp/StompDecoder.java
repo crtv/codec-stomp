@@ -99,13 +99,15 @@ public class StompDecoder {
             }
 
             sb.append(value, currentIndex, nextIndex);
-            if (value.charAt(nextIndex + 1) == 'n') {
+            char nextChar = value.charAt(nextIndex + 1);
+
+            if (nextChar == 'n') {
                 sb.append('\n');
-            } else if (value.charAt(nextIndex + 1) == 'r') {
+            } else if (nextChar == 'r') {
                 sb.append('\r');
-            } else if (value.charAt(nextIndex + 1) == '\\') {
+            } else if (nextChar == '\\') {
                 sb.append('\\');
-            } else if (value.charAt(nextIndex + 1) == 'c') {
+            } else if (nextChar == 'c') {
                 sb.append(':');
             } else {
                 throw new IllegalStateException("Unexpected escaped character occurred: " + value.charAt(nextIndex + 1));
